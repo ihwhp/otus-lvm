@@ -35,6 +35,7 @@ MACHINES = {
 
 Vagrant.configure("2") do |config|
 
+   # config.vm.synced_folder "share/", "/vagrant"
     config.vm.box_version = "1804.02"
     MACHINES.each do |boxname, boxconfig|
   
@@ -48,7 +49,7 @@ Vagrant.configure("2") do |config|
             box.vm.network "private_network", ip: boxconfig[:ip_addr]
   
             box.vm.provider :virtualbox do |vb|
-                    vb.customize ["modifyvm", :id, "--memory", "256"]
+                    vb.customize ["modifyvm", :id, "--cpus", "2", "--memory", "2048"]
                     needsController = false
             boxconfig[:disks].each do |dname, dconf|
                 unless File.exist?(dconf[:dfile])
