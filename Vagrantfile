@@ -49,7 +49,7 @@ Vagrant.configure("2") do |config|
             box.vm.network "private_network", ip: boxconfig[:ip_addr]
   
             box.vm.provider :virtualbox do |vb|
-                    vb.customize ["modifyvm", :id, "--cpus", "2", "--memory", "2048"]
+                    vb.customize ["modifyvm", :id, "--cpus", "3", "--memory", "4096"]
                     needsController = false
             boxconfig[:disks].each do |dname, dconf|
                 unless File.exist?(dconf[:dfile])
@@ -69,7 +69,7 @@ Vagrant.configure("2") do |config|
         box.vm.provision "shell", inline: <<-SHELL
             mkdir -p ~root/.ssh
             cp ~vagrant/.ssh/auth* ~root/.ssh
-            yum install -y mdadm smartmontools hdparm gdisk xfsdump
+            yum install -y mdadm smartmontools hdparm gdisk xfsdump nano
           SHELL
   
         end

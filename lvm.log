@@ -1,0 +1,547 @@
+Script started on 2022-05-23 12:31:55+03:00
+]0;mp@almavm:~/otus/otus-lvm[mp@almavm otus-lvm]$ vagrant ssh
+Last login: Mon May 23 09:29:06 2022 from 10.0.2.2
+]0;vagrant@lvm:~[?1034h[vagrant@lvm ~]$ sudo -i
+]0;root@lvm:~[?1034h[root@lvm ~]# lsblk
+NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                       8:0    0   40G  0 disk 
+├─sda1                    8:1    0    1M  0 part 
+├─sda2                    8:2    0    1G  0 part /boot
+└─sda3                    8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00 253:0    0 37.5G  0 lvm  /
+  └─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+sdb                       8:16   0   10G  0 disk 
+sdc                       8:32   0    2G  0 disk 
+sdd                       8:48   0    1G  0 disk 
+sde                       8:64   0    1G  0 disk 
+]0;root@lvm:~[root@lvm ~]# pvcreate /dev/sdb
+  Physical volume "/dev/sdb" successfully created.
+]0;root@lvm:~[root@lvm ~]# vgcreate vg_root /dev/sdb
+  Volume group "vg_root" successfully created
+]0;root@lvm:~[root@lvm ~]# lvcreate -n lv_root -l +100%FREE /dev/vg_root
+  Logical volume "lv_root" created.
+]0;root@lvm:~[root@lvm ~]# mkfs.xfs /dev/vg_root/lv_root
+meta-data=/dev/vg_root/lv_root   isize=512    agcount=4, agsize=655104 blks
+         =                       sectsz=512   attr=2, projid32bit=1
+         =                       crc=1        finobt=0, sparse=0
+data     =                       bsize=4096   blocks=2620416, imaxpct=25
+         =                       sunit=0      swidth=0 blks
+naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
+log      =internal log           bsize=4096   blocks=2560, version=2
+         =                       sectsz=512   sunit=0 blks, lazy-count=1
+realtime =none                   extsz=4096   blocks=0, rtextents=0
+]0;root@lvm:~[root@lvm ~]# mount /dev/vg_root/lv_root /mnt
+]0;root@lvm:~[root@lvm ~]# xfsdump -J - /dev/VolGroup00/LogVol00 | xfsrestore -J - /mnt
+xfsrestore: using file dump (drive_simple) strategy
+xfsdump: using file dump (drive_simple) strategy
+xfsrestore: version 3.1.7 (dump format 3.0)
+xfsdump: version 3.1.7 (dump format 3.0)
+xfsrestore: searching media for dump
+xfsdump: level 0 dump of lvm:/
+xfsdump: dump date: Mon May 23 09:41:36 2022
+xfsdump: session id: 008b0c31-9019-4187-8800-378972f3f6d5
+xfsdump: session label: ""
+xfsdump: ino map phase 1: constructing initial dump list
+xfsdump: ino map phase 2: skipping (no pruning necessary)
+xfsdump: ino map phase 3: skipping (only one dump stream)
+xfsdump: ino map construction complete
+xfsdump: estimated dump size: 825067904 bytes
+xfsdump: creating dump session media file 0 (media 0, file 0)
+xfsdump: dumping ino map
+xfsdump: dumping directories
+xfsrestore: examining media file 0
+xfsrestore: dump description: 
+xfsrestore: hostname: lvm
+xfsrestore: mount point: /
+xfsrestore: volume: /dev/mapper/VolGroup00-LogVol00
+xfsrestore: session time: Mon May 23 09:41:36 2022
+xfsrestore: level: 0
+xfsrestore: session label: ""
+xfsrestore: media label: ""
+xfsrestore: file system id: b60e9498-0baa-4d9f-90aa-069048217fee
+xfsrestore: session id: 008b0c31-9019-4187-8800-378972f3f6d5
+xfsrestore: media id: f1ce46d5-563f-4ff3-af94-e6ff2fd33ec3
+xfsrestore: searching media for directory dump
+xfsrestore: reading directories
+xfsdump: dumping non-directory files
+xfsrestore: 2760 directories and 23810 entries processed
+xfsrestore: directory post-processing
+xfsrestore: restoring non-directory files
+xfsdump: ending media file
+xfsdump: media file size 801960824 bytes
+xfsdump: dump size (non-dir files) : 788679040 bytes
+xfsdump: dump complete: 103 seconds elapsed
+xfsdump: Dump Status: SUCCESS
+xfsrestore: restore complete: 107 seconds elapsed
+xfsrestore: Restore Status: SUCCESS
+]0;root@lvm:~[root@lvm ~]#  for i in /proc/ /sys/ /dev/ /run/ /boot/; do mount --bind $i /mnt/$i; done
+]0;root@lvm:~[root@lvm ~]# chroot /mnt/
+]0;root@lvm:/[?1034h[root@lvm /]# grub2-mkconfig -o /boot/grub2/grub.cfg
+Generating grub configuration file ...
+Found linux image: /boot/vmlinuz-3.10.0-862.2.3.el7.x86_64
+Found initrd image: /boot/initramfs-3.10.0-862.2.3.el7.x86_64.img
+done
+]0;root@lvm:/[root@lvm /]# cd /boot ; for i in `ls initramfs-*img`; do dracut -v $i `echo $i|sed "s/initramfs-//g; s/.img//g"` --fo rce; done
+Executing: /sbin/dracut -v initramfs-3.10.0-862.2.3.el7.x86_64.img 3.10.0-862.2.3.el7.x86_64 --force
+dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut module 'crypt' will not be installed, because command 'cryptsetup' could not be found!
+dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut module 'dmsquash-live-ntfs' will not be installed, because command 'ntfs-3g' could not be found!
+dracut module 'multipath' will not be installed, because command 'multipath' could not be found!
+dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut module 'crypt' will not be installed, because command 'cryptsetup' could not be found!
+dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut module 'dmsquash-live-ntfs' will not be installed, because command 'ntfs-3g' could not be found!
+dracut module 'multipath' will not be installed, because command 'multipath' could not be found!
+*** Including module: bash ***
+*** Including module: nss-softokn ***
+*** Including module: i18n ***
+*** Including module: drm ***
+*** Including module: plymouth ***
+*** Including module: dm ***
+Skipping udev rule: 64-device-mapper.rules
+Skipping udev rule: 60-persistent-storage-dm.rules
+Skipping udev rule: 55-dm.rules
+*** Including module: kernel-modules ***
+Omitting driver floppy
+*** Including module: lvm ***
+Skipping udev rule: 64-device-mapper.rules
+Skipping udev rule: 56-lvm.rules
+Skipping udev rule: 60-persistent-storage-lvm.rules
+*** Including module: qemu ***
+*** Including module: resume ***
+*** Including module: rootfs-block ***
+*** Including module: terminfo ***
+*** Including module: udev-rules ***
+Skipping udev rule: 40-redhat-cpu-hotplug.rules
+Skipping udev rule: 91-permissions.rules
+*** Including module: biosdevname ***
+*** Including module: systemd ***
+*** Including module: usrmount ***
+*** Including module: base ***
+*** Including module: fs-lib ***
+*** Including module: shutdown ***
+*** Including modules done ***
+*** Installing kernel module dependencies and firmware ***
+*** Installing kernel module dependencies and firmware done ***
+*** Resolving executable dependencies ***
+*** Resolving executable dependencies done***
+*** Hardlinking files ***
+*** Hardlinking files done ***
+*** Stripping files ***
+*** Stripping files done ***
+*** Generating early-microcode cpio image contents ***
+*** No early-microcode cpio image needed ***
+*** Store current command line parameters ***
+*** Creating image file ***
+*** Creating image file done ***
+*** Creating initramfs image file '/boot/initramfs-3.10.0-862.2.3.el7.x86_64.img' done ***
+]0;root@lvm:/boot[root@lvm boot]# nano /boot/grub
+grub/  grub2/ 
+[root@lvm boot]# nano /boot/grub2/grub
+grub.cfg  grubenv   
+[root@lvm boot]# nano /boot/grub2/grub.cfg 
+[?1049h[1;55r(B[m[4l[?7h[?12l[?25h[?1h=[?1h=[?1h=[39;49m[39;49m(B[m[H[2J(B[0;7m  GNU nano 2.3.1                       File: /boot/grub2/grub.cfg                                                     [3;1H(B[m#[4d# DO NOT EDIT THIS FILE[5d#[6d# It is automatically generated by grub2-mkconfig using templates[7d# from /etc/grub.d and settings from /etc/default/grub[8d#[10d### BEGIN /etc/grub.d/00_header ###[11dset pager=1[13dif [ -s $prefix/grubenv ]; then[14;3Hload_env[15dfi[16dif [ "${next_entry}" ] ; then[17;4Hset default="${next_entry}"[18;4Hset next_entry=[19;4Hsave_env next_entry[20;4Hset boot_once=true[21delse[22dset default="${saved_entry}"[23dfi[25dif [ x"${feature_menuentry_id}" = xy ]; then[26;3Hmenuentry_id_option="--id"[27delse[28dmenuentry_id_option=""[29dfi[31dexport menuentry_id_option[33dif [ "${prev_saved_entry}" ]; then[34;3Hset saved_entry="${prev_saved_entry}"[35;3Hsave_env saved_entry[36;3Hset prev_saved_entry=[37;3Hsave_env prev_saved_entry[38;3Hset boot_once=true[39dfi[41dfunction savedefault {[42;3Hif [ -z "${boot_once}" ]; then[43;5Hsaved_entry="${chosen}"[44;5Hsave_env saved_entry[45;3Hfi[46d}[48dfunction load_video {[49;3Hif [ x$feature_all_video_module = xy ]; then[50;5Hinsmod all_video[51;3Helse[52dinsmod efi_gop[53;51H(B[0;7m[ Read 127 lines ][54d^G(B[m Get Help[54;20H(B[0;7m^O(B[m WriteOut[54;39H(B[0;7m^R(B[m Read File	 (B[0;7m^Y(B[m Prev Page[77G(B[0;7m^K(B[m Cut Text[54;96H(B[0;7m^C(B[m Cur Pos[55d(B[0;7m^X(B[m Exit[55;20H(B[0;7m^J(B[m Justify[55;39H(B[0;7m^W(B[m Where Is[55;58H(B[0;7m^V(B[m Next Page[77G(B[0;7m^U(B[m UnCut Text[96G(B[0;7m^T(B[m To Spell[3d[4d[54d[J[55;118H[55;1H[?1049l[?1l>]0;root@lvm:/boot[root@lvm boot]# lsblk
+NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                       8:0    0   40G  0 disk 
+├─sda1                    8:1    0    1M  0 part 
+├─sda2                    8:2    0    1G  0 part /boot
+└─sda3                    8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00 253:0    0 37.5G  0 lvm  
+  └─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+sdb                       8:16   0   10G  0 disk 
+└─vg_root-lv_root       253:2    0   10G  0 lvm  /
+sdc                       8:32   0    2G  0 disk 
+sdd                       8:48   0    1G  0 disk 
+sde                       8:64   0    1G  0 disk 
+]0;root@lvm:/boot[root@lvm boot]# lsblknano /boot/grub2/grub.cfg 
+[?1049h[1;55r(B[m[4l[?7h[?12l[?25h[?1h=[?1h=[?1h=[39;49m[39;49m(B[m[H[2J(B[0;7m  GNU nano 2.3.1                       File: /boot/grub2/grub.cfg                                                     [3;1H(B[m#[4d# DO NOT EDIT THIS FILE[5d#[6d# It is automatically generated by grub2-mkconfig using templates[7d# from /etc/grub.d and settings from /etc/default/grub[8d#[10d### BEGIN /etc/grub.d/00_header ###[11dset pager=1[13dif [ -s $prefix/grubenv ]; then[14;3Hload_env[15dfi[16dif [ "${next_entry}" ] ; then[17;4Hset default="${next_entry}"[18;4Hset next_entry=[19;4Hsave_env next_entry[20;4Hset boot_once=true[21delse[22dset default="${saved_entry}"[23dfi[25dif [ x"${feature_menuentry_id}" = xy ]; then[26;3Hmenuentry_id_option="--id"[27delse[28dmenuentry_id_option=""[29dfi[31dexport menuentry_id_option[33dif [ "${prev_saved_entry}" ]; then[34;3Hset saved_entry="${prev_saved_entry}"[35;3Hsave_env saved_entry[36;3Hset prev_saved_entry=[37;3Hsave_env prev_saved_entry[38;3Hset boot_once=true[39dfi[41dfunction savedefault {[42;3Hif [ -z "${boot_once}" ]; then[43;5Hsaved_entry="${chosen}"[44;5Hsave_env saved_entry[45;3Hfi[46d}[48dfunction load_video {[49;3Hif [ x$feature_all_video_module = xy ]; then[50;5Hinsmod all_video[51;3Helse[52dinsmod efi_gop[53;51H(B[0;7m[ Read 127 lines ][54d^G(B[m Get Help[54;20H(B[0;7m^O(B[m WriteOut[54;39H(B[0;7m^R(B[m Read File	 (B[0;7m^Y(B[m Prev Page[77G(B[0;7m^K(B[m Cut Text[54;96H(B[0;7m^C(B[m Cur Pos[55d(B[0;7m^X(B[m Exit[55;20H(B[0;7m^J(B[m Justify[55;39H(B[0;7m^W(B[m Where Is[55;58H(B[0;7m^V(B[m Next Page[77G(B[0;7m^U(B[m UnCut Text[96G(B[0;7m^T(B[m To Spell[3d[4d[5d[6d[7d[8d[9d[10d[11d[12d[13d[14d[15d[16d[17d[18d[19d[20d[21d[22d[23d[24d[25d[26d[27d[28d[53d[K[29d[30d[31d[32d[33d[34d[35d[36d[37d[38d[39d[40d[41d[42d[43d[44d[45d[46d[47d[48d[49d[50d[51d[52d7[3;53r8[53d[26S[1;55r[27;5Hinsmod efi_uga[28;5Hinsmod ieee1275_fb[29;5Hinsmod vbe[30;5Hinsmod vga[31;5Hinsmod video_bochs[32;5Hinsmod video_cirrus[33;3Hfi[34d}[36dterminal_output console[37dif [ x$feature_timeout_style = xy ] ; then[38;3Hset timeout_style=menu[39;3Hset timeout=1[40d# Fallback normal timeout code in case the timeout_style feature is[41d# unavailable.[42delse[43dset timeout=1[44dfi[45d### END /etc/grub.d/00_header ###[47d### BEGIN /etc/grub.d/00_tuned ###[48dset tuned_params=""[49dset tuned_initrd=""[50d### END /etc/grub.d/00_tuned ###[52d### BEGIN /etc/grub.d/01_users ###[27d[28d[29d[30d[31d[32d[33d[34d[35d[36d[37d[38d[39d[40d[41d[42d[43d[44d[45d[46d[47d[48d[49d[50d[51d[52d7[3;53r8[53d[26S[1;55r[27;1Hif [ -f ${prefix}/user.cfg ]; then[28;3Hsource ${prefix}/user.cfg[29;3Hif [ -n "${GRUB2_PASSWORD}" ]; then[30;5Hset superusers="root"[31;5Hexport superusers[32;5Hpassword_pbkdf2 root ${GRUB2_PASSWORD}[33;3Hfi[34dfi[35d### END /etc/grub.d/01_users ###[37d### BEGIN /etc/grub.d/10_linux ###[38dmenuentry 'CentOS Linux (3.10.0-862.2.3.el7.x86_64) 7 (Core)' --class centos --class gnu-linux --class gnu --class os$[39;9Hload_video[40;9Hset gfxpayload=keep[41;9Hinsmod gzio[42;9Hinsmod part_msdos[43;9Hinsmod xfs[44;9Hset root='hd0,msdos2'[45;9Hif [ x$feature_platform_search_hint = xy ]; then[46;11Hsearch --no-floppy --fs-uuid --set=root --hint-bios=hd0,msdos2 --hint-efi=hd0,msdos2 --hint-baremetal=ahci0$[47;9Helse[48dsearch --no-floppy --fs-uuid --set=root 570897ca-e759-4c81-90cf-389da6eee4cc[49;9Hfi[50d	linux16 /vmlinuz-3.10.0-862.2.3.el7.x86_64 root=/dev/mapper/vg_root-lv_root ro no_timer_check console=tty0 co$[51;9Hinitrd16 /initramfs-3.10.0-862.2.3.el7.x86_64.img[52d}[27d[28d[29d[30d[31d[32d[33d[34d[35d[36d[37d[38d[39d[40d[41d[42d[43d[44d[45d[46d[47d[48d[49d[50d[51d[52d7[3;53r8[53d[26S[1;55r[27;1Hif [ "x$default" = 'CentOS Linux (3.10.0-862.2.3.el7.x86_64) 7 (Core)' ]; then default='Advanced options for CentOS L$[28;1H### END /etc/grub.d/10_linux ###[30d### BEGIN /etc/grub.d/20_linux_xen ###[31d### END /etc/grub.d/20_linux_xen ###[33d### BEGIN /etc/grub.d/20_ppc_terminfo ###[34d### END /etc/grub.d/20_ppc_terminfo ###[36d### BEGIN /etc/grub.d/30_os-prober ###[37d### END /etc/grub.d/30_os-prober ###[39d### BEGIN /etc/grub.d/40_custom ###[40d# This file provides an easy way to add custom menu entries.  Simply type the[41d# menu entries you want to add after this comment.  Be careful not to change[42d# the 'exec tail' line above.[43d### END /etc/grub.d/40_custom ###[45d### BEGIN /etc/grub.d/41_custom ###[46dif [ -f  ${config_directory}/custom.cfg ]; then[47;3Hsource ${config_directory}/custom.cfg[48delif [ -z "${config_directory}" -a -f  $prefix/custom.cfg ]; then[49;3Hsource $prefix/custom.cfg;[50dfi[51d### END /etc/grub.d/41_custom ###[27d[28d[Aif [ "x	default	[A}[25;17H[A/vmlinu	-3.10.0	862.2.3	el7.x86	64 root	/dev/ma	per/vg_	oot-lv_	oot ro 	o_timer	check c	nsole=t	y0 c$ty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=VolGroup00/LogVol00 [8G	sole=	[1K	linux16 /vmlinuz-3.10.0-862.2.3.el7.x86_64 root=/dev/mapper/vg_root-lv_root ro no_timer_check console=tty0 co[Zle=t	y0 c$ty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=VolGroup00/LogVol00 [8G	sole=tt	S0,1152	0n8 net	ifnames	0 biosd	vname=0	elevato	=noop c	ashkern	l=auto 	d.lvm.l	=VolGro	p00/Log	ol00[Z0[1;109H(B[0;7mModified[24;107H(B[m/LogVol00 r[24;107H/LogVol00 rd[24;106H[Z/LogVol00 rd.[24;105H/LogVol00 rd.l[24;104H/LogVol00 rd.lv[24;103H/LogVol00 rd.lvm[24;102H/LogVol00 rd.lvm.[24;101H/LogVol00 rd.lvm.l[24;100H/LogVol00 rd.lvm.lv[24;99H/LogVol00 rd.lvm.lv=[24;98Hv/LogVol00 rd.lvm.lv[24;99Hg/LogVol00 rd.lvm.l[24;100H_/LogVol00 rd.lvm.[24;101Hr/LogVol00 rd.lvm[24;102Ho/LogVol00 rd.lv[24;103Ho/LogVol00 rd.l[24;104Ht/LogVol00 rd.[24;105H/LogVol	0[Z rd.l[Z rd.lv[Z rd.lvm[111G rd.lvm.[24;110H rd.lvm.l[24;109H rd.lvm.lv[24;108H rd.lvm.lv=[24;107H rd.lvm.lv=V[24;106Hl rd.lvm.lv=[24;107Hv rd.lvm.lv[24;108H_ rd.lvm.l[24;109Hr rd.lvm.[24;110Ho rd.lvm[111Go rd.lv[Zt rd.l[Z rd.$t rd.lvm.lv=VolGroup00/LogVol01 rhgb quiet[K[8G	m.lv=	$ty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=vg_root/lv_root rd.l$[24;117H[Z[Z[Z[Zuto 	d.lvm.l	=vg_roo	/lv_roo	 rd.$t rd.lvm.lv=VolGroup00/LogVol01 rhgb quiet[K[8G	m.lv=Vo	Group00[Z	$ty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=vg_root/lv_root rd.l$[24;117Hrd.$t rd.lvm.lv=VolGroup00/LogVol01 rhgb quiet[K[8G	m.l		m.	$ty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=vg_root/lv_root rd.l$[24;117H[Z[Z[53d(B[0;7mFile Name to Write: /boot/grub2/grub.cfg                                                                              [54;20H(B[m          (B[0;7mM-D(B[m DOS Format       	  (B[0;7mM-A(B[m Append [77G           (B[0;7mM-B(B[m Backup File[K[55;2H(B[0;7mC(B[m Cancel[55;20H          (B[0;7mM-M(B[m Mac Format      [55;58H (B[0;7mM-P(B[m Prepend[K[53;41H[1;109H[39;49m(B[0;7m        [53;49H(B[m[1K (B[0;7m[ Wrote 127 lines ](B[m[K[54;20H(B[0;7m^O(B[m WriteOut        (B[0;7m^R(B[m Read File	 (B[0;7m^Y(B[m Prev Page[77G(B[0;7m^K(B[m Cut Text        (B[0;7m^C(B[m Cur Pos[55;2H(B[0;7mX(B[m Exit  [55;20H(B[0;7m^J(B[m Justify         (B[0;7m^W(B[m Where Is[55;58H(B[0;7m^V(B[m Next Page[77G(B[0;7m^U(B[m UnCut Text[96G(B[0;7m^T(B[m To Spell[24;100H[54d[J[55;118H[55;1H[?1049l[?1l>]0;root@lvm:/boot[root@lvm boot]# cat /boot/grub2/grub [K. [Kcfg | grep lm[Kvm.lc
+]0;root@lvm:/boot[root@lvm boot]# cat /boot/grub2/grub.cfg | grep lvm.lc[Kv
+	linux16 /vmlinuz-3.10.0-862.2.3.el7.x86_64 root=/dev/mapper/vg_root-lv_root ro no_timer_check console=tty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.[01;31m[Klvm.lv[m[K=vg_root/lv_root rd.[01;31m[Klvm.lv[m[K=VolGroup00/LogVol01 rhgb quiet 
+]0;root@lvm:/boot[root@lvm boot]# exit
+exit
+]0;root@lvm:~[root@lvm ~]# reboot 
+PolicyKit daemon disconnected from the bus.
+We are no longer a registered authentication agent.
+Connection to 127.0.0.1 closed by remote host.
+Connection to 127.0.0.1 closed.
+]0;mp@almavm:~/otus/otus-lvm[mp@almavm otus-lvm]$ vagrant ssh
+Last login: Mon May 23 09:32:05 2022 from 10.0.2.2
+]0;vagrant@lvm:~[?1034h[vagrant@lvm ~]$ lsblk
+NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                       8:0    0   40G  0 disk 
+├─sda1                    8:1    0    1M  0 part 
+├─sda2                    8:2    0    1G  0 part /boot
+└─sda3                    8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+  └─VolGroup00-LogVol00 253:2    0 37.5G  0 lvm  
+sdb                       8:16   0   10G  0 disk 
+└─vg_root-lv_root       253:0    0   10G  0 lvm  /
+sdc                       8:32   0    2G  0 disk 
+sdd                       8:48   0    1G  0 disk 
+sde                       8:64   0    1G  0 disk 
+]0;vagrant@lvm:~[vagrant@lvm ~]$ lvremove /dev/VolGroup00/LogVol00
+  WARNING: Running as a non-root user. Functionality may be unavailable.
+  /run/lvm/lvmetad.socket: access failed: Permission denied
+  WARNING: Failed to connect to lvmetad. Falling back to device scanning.
+  /dev/mapper/control: open failed: Permission denied
+  Failure to communicate with kernel device-mapper driver.
+  Incompatible libdevmapper 1.02.146-RHEL7 (2018-01-22) and kernel driver (unknown version).
+  /run/lock/lvm/V_VolGroup00:aux: open failed: Permission denied
+  Can't get lock for VolGroup00
+  Cannot process volume group VolGroup00
+]0;vagrant@lvm:~[vagrant@lvm ~]$ roo[K[K[Ksudo -i
+]0;root@lvm:~[?1034h[root@lvm ~]# lvremove /dev/VolGroup00/LogVol00
+Do you really want to remove active logical volume VolGroup00/LogVol00? [y/n]: y
+  Logical volume "LogVol00" successfully removed
+]0;root@lvm:~[root@lvm ~]# lvcreate -n VolGroup00/LogVol00 -L 8G /dev/VolGroup00
+WARNING: xfs signature detected on /dev/VolGroup00/LogVol00 at offset 0. Wipe it? [y/n]: y
+  Wiping xfs signature on /dev/VolGroup00/LogVol00.
+  Logical volume "LogVol00" created.
+]0;root@lvm:~[root@lvm ~]#  mkfs.xfs /dev/VolGroup00/LogVol00
+meta-data=/dev/VolGroup00/LogVol00 isize=512    agcount=4, agsize=524288 blks
+         =                       sectsz=512   attr=2, projid32bit=1
+         =                       crc=1        finobt=0, sparse=0
+data     =                       bsize=4096   blocks=2097152, imaxpct=25
+         =                       sunit=0      swidth=0 blks
+naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
+log      =internal log           bsize=4096   blocks=2560, version=2
+         =                       sectsz=512   sunit=0 blks, lazy-count=1
+realtime =none                   extsz=4096   blocks=0, rtextents=0
+]0;root@lvm:~[root@lvm ~]#  mount /dev/VolGroup00/LogVol00 /mnt
+]0;root@lvm:~[root@lvm ~]# xfsdump -J - /dev/vg_root/lv_root | xfsrestore -J - /mnt
+xfsrestore: using file dump (drive_simple) strategy
+xfsdump: using file dump (drive_simple) strategy
+xfsrestore: version 3.1.7 (dump format 3.0)
+xfsdump: version 3.1.7 (dump format 3.0)
+xfsrestore: searching media for dump
+xfsdump: level 0 dump of lvm:/
+xfsdump: dump date: Mon May 23 10:14:20 2022
+xfsdump: session id: 6865e7d9-7923-4c35-bdb4-a69442266860
+xfsdump: session label: ""
+xfsdump: ino map phase 1: constructing initial dump list
+xfsdump: ino map phase 2: skipping (no pruning necessary)
+xfsdump: ino map phase 3: skipping (only one dump stream)
+xfsdump: ino map construction complete
+xfsdump: estimated dump size: 824237696 bytes
+xfsdump: creating dump session media file 0 (media 0, file 0)
+xfsdump: dumping ino map
+xfsdump: dumping directories
+xfsrestore: examining media file 0
+xfsrestore: dump description: 
+xfsrestore: hostname: lvm
+xfsrestore: mount point: /
+xfsrestore: volume: /dev/mapper/vg_root-lv_root
+xfsrestore: session time: Mon May 23 10:14:20 2022
+xfsrestore: level: 0
+xfsrestore: session label: ""
+xfsrestore: media label: ""
+xfsrestore: file system id: 7c5b0104-14b6-46e8-b528-80e5acd56bb6
+xfsrestore: session id: 6865e7d9-7923-4c35-bdb4-a69442266860
+xfsrestore: media id: 4d102ba3-5bd0-4884-b3e6-9564ede2c4c1
+xfsrestore: searching media for directory dump
+xfsrestore: reading directories
+xfsdump: dumping non-directory files
+xfsrestore: 2764 directories and 23814 entries processed
+xfsrestore: directory post-processing
+xfsrestore: restoring non-directory files
+xfsdump: ending media file
+xfsdump: media file size 800445000 bytes
+xfsdump: dump size (non-dir files) : 787160168 bytes
+xfsdump: dump complete: 60 seconds elapsed
+xfsdump: Dump Status: SUCCESS
+xfsrestore: restore complete: 62 seconds elapsed
+xfsrestore: Restore Status: SUCCESS
+]0;root@lvm:~[root@lvm ~]# for i in /proc/ /sys/ /dev/ /run/ /boot/; do mount --bind $i /mnt/$i; done
+]0;root@lvm:~[root@lvm ~]# chroot m[K/mnt/
+]0;root@lvm:/[?1034h[root@lvm /]# grub2-mkconfig -o /boot/grub2/grub.cfg
+Generating grub configuration file ...
+Found linux image: /boot/vmlinuz-3.10.0-862.2.3.el7.x86_64
+Found initrd image: /boot/initramfs-3.10.0-862.2.3.el7.x86_64.img
+done
+]0;root@lvm:/[root@lvm /]# cd /boot ; for i in `ls initramfs-*img`; do dracut -v $i `echo $i|sed "s/initramfs-//g; s/.img//g"` --fo rce; done
+Executing: /sbin/dracut -v initramfs-3.10.0-862.2.3.el7.x86_64.img 3.10.0-862.2.3.el7.x86_64 --force
+dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut module 'crypt' will not be installed, because command 'cryptsetup' could not be found!
+dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut module 'dmsquash-live-ntfs' will not be installed, because command 'ntfs-3g' could not be found!
+dracut module 'multipath' will not be installed, because command 'multipath' could not be found!
+dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut module 'crypt' will not be installed, because command 'cryptsetup' could not be found!
+dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut module 'dmsquash-live-ntfs' will not be installed, because command 'ntfs-3g' could not be found!
+dracut module 'multipath' will not be installed, because command 'multipath' could not be found!
+*** Including module: bash ***
+*** Including module: nss-softokn ***
+*** Including module: i18n ***
+*** Including module: drm ***
+*** Including module: plymouth ***
+*** Including module: dm ***
+Skipping udev rule: 64-device-mapper.rules
+Skipping udev rule: 60-persistent-storage-dm.rules
+Skipping udev rule: 55-dm.rules
+*** Including module: kernel-modules ***
+Omitting driver floppy
+*** Including module: lvm ***
+Skipping udev rule: 64-device-mapper.rules
+Skipping udev rule: 56-lvm.rules
+Skipping udev rule: 60-persistent-storage-lvm.rules
+*** Including module: qemu ***
+*** Including module: resume ***
+*** Including module: rootfs-block ***
+*** Including module: terminfo ***
+*** Including module: udev-rules ***
+Skipping udev rule: 40-redhat-cpu-hotplug.rules
+Skipping udev rule: 91-permissions.rules
+*** Including module: biosdevname ***
+*** Including module: systemd ***
+*** Including module: usrmount ***
+*** Including module: base ***
+*** Including module: fs-lib ***
+*** Including module: shutdown ***
+*** Including modules done ***
+*** Installing kernel module dependencies and firmware ***
+*** Installing kernel module dependencies and firmware done ***
+*** Resolving executable dependencies ***
+*** Resolving executable dependencies done***
+*** Hardlinking files ***
+*** Hardlinking files done ***
+*** Stripping files ***
+*** Stripping files done ***
+*** Generating early-microcode cpio image contents ***
+*** No early-microcode cpio image needed ***
+*** Store current command line parameters ***
+*** Creating image file ***
+*** Creating image file done ***
+*** Creating initramfs image file '/boot/initramfs-3.10.0-862.2.3.el7.x86_64.img' done ***
+]0;root@lvm:/boot[root@lvm boot]# pvcreate /dev/sdd dev[K[K[K/dev/sde
+  Physical volume "/dev/sdd" successfully created.
+  Physical volume "/dev/sde" successfully created.
+]0;root@lvm:/boot[root@lvm boot]# pvcr[K[K[K[Kvgcreate vg_var /dev/sdd/[K d/[K[K/dde[K[Kev/sde
+  Volume group "vg_var" successfully created
+]0;root@lvm:/boot[root@lvm boot]# lsblk
+NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                       8:0    0   40G  0 disk 
+├─sda1                    8:1    0    1M  0 part 
+├─sda2                    8:2    0    1G  0 part /boot
+└─sda3                    8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+  └─VolGroup00-LogVol00 253:2    0    8G  0 lvm  /
+sdb                       8:16   0   10G  0 disk 
+└─vg_root-lv_root       253:0    0   10G  0 lvm  
+sdc                       8:32   0    2G  0 disk 
+sdd                       8:48   0    1G  0 disk 
+sde                       8:64   0    1G  0 disk 
+]0;root@lvm:/boot[root@lvm boot]# lvcreate -L 950M -m1 -n lv_var vg_var
+  Rounding up size to full physical extent 952.00 MiB
+  Logical volume "lv_var" created.
+]0;root@lvm:/boot[root@lvm boot]# lvcreate -L 950M -m1 -n lv_var vg_var[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csblk[Kvcreate -L 950M -m1 -n lv_var vg_var[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csblk[K
+NAME                     MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                        8:0    0   40G  0 disk 
+├─sda1                     8:1    0    1M  0 part 
+├─sda2                     8:2    0    1G  0 part /boot
+└─sda3                     8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol01  253:1    0  1.5G  0 lvm  [SWAP]
+  └─VolGroup00-LogVol00  253:2    0    8G  0 lvm  /
+sdb                        8:16   0   10G  0 disk 
+└─vg_root-lv_root        253:0    0   10G  0 lvm  
+sdc                        8:32   0    2G  0 disk 
+sdd                        8:48   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_0  253:3    0    4M  0 lvm  
+│ └─vg_var-lv_var        253:7    0  952M  0 lvm  
+└─vg_var-lv_var_rimage_0 253:4    0  952M  0 lvm  
+  └─vg_var-lv_var        253:7    0  952M  0 lvm  
+sde                        8:64   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_1  253:5    0    4M  0 lvm  
+│ └─vg_var-lv_var        253:7    0  952M  0 lvm  
+└─vg_var-lv_var_rimage_1 253:6    0  952M  0 lvm  
+  └─vg_var-lv_var        253:7    0  952M  0 lvm  
+]0;root@lvm:/boot[root@lvm boot]# mkfs.ext4 /dev/vg_var/lv_va
+mke2fs 1.42.9 (28-Dec-2013)
+Could not stat /dev/vg_var/lv_va --- No such file or directory
+
+The device apparently does not exist; did you specify it correctly?
+]0;root@lvm:/boot[root@lvm boot]# mkfs.ext4 /dev/vg_var/lv_var 
+mke2fs 1.42.9 (28-Dec-2013)
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+60928 inodes, 243712 blocks
+12185 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=249561088
+8 block groups
+32768 blocks per group, 32768 fragments per group
+7616 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376
+
+Allocating group tables: 0/8   done                            
+Writing inode tables: 0/8   done                            
+Creating journal (4096 blocks): done
+Writing superblocks and filesystem accounting information: 0/8   done
+
+]0;root@lvm:/boot[root@lvm boot]# mount /dev/vg_var/lv_var /mnt
+]0;root@lvm:/boot[root@lvm boot]# cp -aR /var/* /mnt/
+]0;root@lvm:/boot[root@lvm boot]# mkdir /tmp/oldvar && mv /var/* /tmp/oldvar
+]0;root@lvm:/boot[root@lvm boot]# umount /mnt
+]0;root@lvm:/boot[root@lvm boot]# mount /dev/vg_var/lv_var /var
+]0;root@lvm:/boot[root@lvm boot]# echo "`blkid | grep var: | awk '{print $2}'` /var ext4 defaults 0 0" >> /etc/fstab
+]0;root@lvm:/boot[root@lvm boot]# exit
+exit
+]0;root@lvm:~[root@lvm ~]# reboot
+Connection to 127.0.0.1 closed by remote host.
+Connection to 127.0.0.1 closed.
+]0;mp@almavm:~/otus/otus-lvm[mp@almavm otus-lvm]$ мф[K[Kvagrant ssh
+Last login: Mon May 23 10:12:34 2022 from 10.0.2.2
+]0;vagrant@lvm:~[?1034h[vagrant@lvm ~]$ lsblk
+NAME                     MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                        8:0    0   40G  0 disk 
+├─sda1                     8:1    0    1M  0 part 
+├─sda2                     8:2    0    1G  0 part /boot
+└─sda3                     8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00  253:0    0    8G  0 lvm  /
+  └─VolGroup00-LogVol01  253:1    0  1.5G  0 lvm  [SWAP]
+sdb                        8:16   0   10G  0 disk 
+└─vg_root-lv_root        253:2    0   10G  0 lvm  
+sdc                        8:32   0    2G  0 disk 
+sdd                        8:48   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_0  253:3    0    4M  0 lvm  
+│ └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_0 253:4    0  952M  0 lvm  
+  └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+sde                        8:64   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_1  253:5    0    4M  0 lvm  
+│ └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_1 253:6    0  952M  0 lvm  
+  └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+]0;vagrant@lvm:~[vagrant@lvm ~]$ lvremove /dev/vg_root/lv_root
+  WARNING: Running as a non-root user. Functionality may be unavailable.
+  /run/lvm/lvmetad.socket: access failed: Permission denied
+  WARNING: Failed to connect to lvmetad. Falling back to device scanning.
+  /dev/mapper/control: open failed: Permission denied
+  Failure to communicate with kernel device-mapper driver.
+  Incompatible libdevmapper 1.02.146-RHEL7 (2018-01-22) and kernel driver (unknown version).
+  /run/lock/lvm/V_vg_root:aux: open failed: Permission denied
+  Can't get lock for vg_root
+  Cannot process volume group vg_root
+]0;vagrant@lvm:~[vagrant@lvm ~]$ sudo -i
+]0;root@lvm:~[?1034h[root@lvm ~]# lvremove /dev/vg_root/lv_root
+Do you really want to remove active logical volume vg_root/lv_root? [y/n]: y
+  Logical volume "lv_root" successfully removed
+]0;root@lvm:~[root@lvm ~]# vgremove /dev/vg_root
+  Volume group "vg_root" successfully removed
+]0;root@lvm:~[root@lvm ~]# pvremove /dev/sdb
+  Labels on physical volume "/dev/sdb" successfully wiped.
+]0;root@lvm:~[root@lvm ~]# lsblk
+NAME                     MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                        8:0    0   40G  0 disk 
+├─sda1                     8:1    0    1M  0 part 
+├─sda2                     8:2    0    1G  0 part /boot
+└─sda3                     8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00  253:0    0    8G  0 lvm  /
+  └─VolGroup00-LogVol01  253:1    0  1.5G  0 lvm  [SWAP]
+sdb                        8:16   0   10G  0 disk 
+sdc                        8:32   0    2G  0 disk 
+sdd                        8:48   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_0  253:3    0    4M  0 lvm  
+│ └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_0 253:4    0  952M  0 lvm  
+  └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+sde                        8:64   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_1  253:5    0    4M  0 lvm  
+│ └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_1 253:6    0  952M  0 lvm  
+  └─vg_var-lv_var        253:7    0  952M  0 lvm  /var
+]0;root@lvm:~[root@lvm ~]# vcreate -n LogVol_Home -L 2G /dev/VolGroup00
+-bash: vcreate: command not found
+]0;root@lvm:~[root@lvm ~]# lvcreate -n LogVol_Home -L 2G /dev/VolGroup00
+  Logical volume "LogVol_Home" created.
+]0;root@lvm:~[root@lvm ~]# mkfs.xfs /dev/VolGroup00/LogVol_Home
+meta-data=/dev/VolGroup00/LogVol_Home isize=512    agcount=4, agsize=131072 blks
+         =                       sectsz=512   attr=2, projid32bit=1
+         =                       crc=1        finobt=0, sparse=0
+data     =                       bsize=4096   blocks=524288, imaxpct=25
+         =                       sunit=0      swidth=0 blks
+naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
+log      =internal log           bsize=4096   blocks=2560, version=2
+         =                       sectsz=512   sunit=0 blks, lazy-count=1
+realtime =none                   extsz=4096   blocks=0, rtextents=0
+]0;root@lvm:~[root@lvm ~]#  mount /dev/VolGroup00/LogVol_Home /mnt/
+]0;root@lvm:~[root@lvm ~]# cp -aR /home/* /mnt/
+]0;root@lvm:~[root@lvm ~]# rm -rf /home/*
+]0;root@lvm:~[root@lvm ~]# umount /mnt
+]0;root@lvm:~[root@lvm ~]# mount /dev/VolGroup00/LogVol_Home /home/
+]0;root@lvm:~[root@lvm ~]# echo "`blkid | grep Home | awk '{print $2}'` /home xfs defaults 0 0" >> /etc/fstab
+]0;root@lvm:~[root@lvm ~]# lsblk
+NAME                       MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                          8:0    0   40G  0 disk 
+├─sda1                       8:1    0    1M  0 part 
+├─sda2                       8:2    0    1G  0 part /boot
+└─sda3                       8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00    253:0    0    8G  0 lvm  /
+  ├─VolGroup00-LogVol01    253:1    0  1.5G  0 lvm  [SWAP]
+  └─VolGroup00-LogVol_Home 253:2    0    2G  0 lvm  /home
+sdb                          8:16   0   10G  0 disk 
+sdc                          8:32   0    2G  0 disk 
+sdd                          8:48   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_0    253:3    0    4M  0 lvm  
+│ └─vg_var-lv_var          253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_0   253:4    0  952M  0 lvm  
+  └─vg_var-lv_var          253:7    0  952M  0 lvm  /var
+sde                          8:64   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_1    253:5    0    4M  0 lvm  
+│ └─vg_var-lv_var          253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_1   253:6    0  952M  0 lvm  
+  └─vg_var-lv_var          253:7    0  952M  0 lvm  /var
+]0;root@lvm:~[root@lvm ~]# touch /home/file{1..2[K10}
+]0;root@lvm:~[root@lvm ~]# ls ho[K[K/home/
+file1  file10  file2  file3  file4  file5  file6  file7  file8  file9  [0m[01;34mvagrant[0m
+]0;root@lvm:~[root@lvm ~]# lvcreate -L 100MB -s -n home_snap /dev/VolGroup00/LogVol_Home
+  Rounding up size to full physical extent 128.00 MiB
+  Logical volume "home_snap" created.
+]0;root@lvm:~[root@lvm ~]# lsblk
+NAME                            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda                               8:0    0   40G  0 disk 
+├─sda1                            8:1    0    1M  0 part 
+├─sda2                            8:2    0    1G  0 part /boot
+└─sda3                            8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00         253:0    0    8G  0 lvm  /
+  ├─VolGroup00-LogVol01         253:1    0  1.5G  0 lvm  [SWAP]
+  ├─VolGroup00-LogVol_Home-real 253:8    0    2G  0 lvm  
+  │ ├─VolGroup00-LogVol_Home    253:2    0    2G  0 lvm  /home
+  │ └─VolGroup00-home_snap      253:10   0    2G  0 lvm  
+  └─VolGroup00-home_snap-cow    253:9    0  128M  0 lvm  
+    └─VolGroup00-home_snap      253:10   0    2G  0 lvm  
+sdb                               8:16   0   10G  0 disk 
+sdc                               8:32   0    2G  0 disk 
+sdd                               8:48   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_0         253:3    0    4M  0 lvm  
+│ └─vg_var-lv_var               253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_0        253:4    0  952M  0 lvm  
+  └─vg_var-lv_var               253:7    0  952M  0 lvm  /var
+sde                               8:64   0    1G  0 disk 
+├─vg_var-lv_var_rmeta_1         253:5    0    4M  0 lvm  
+│ └─vg_var-lv_var               253:7    0  952M  0 lvm  /var
+└─vg_var-lv_var_rimage_1        253:6    0  952M  0 lvm  
+  └─vg_var-lv_var               253:7    0  952M  0 lvm  /var
+]0;root@lvm:~[root@lvm ~]# rm -f /home/file{3..7}
+]0;root@lvm:~[root@lvm ~]# ls /home/
+file1  file10  file2  file8  file9  [0m[01;34mvagrant[0m
+]0;root@lvm:~[root@lvm ~]# umount /home/
+]0;root@lvm:~[root@lvm ~]# lvconvert --merge /dev/VolGroup00/home_snap
+  Merging of volume VolGroup00/home_snap started.
+  VolGroup00/LogVol_Home: Merged: 100.00%
+]0;root@lvm:~[root@lvm ~]#  mount /home
+]0;root@lvm:~[root@lvm ~]# ls /home/
+file1  file10  file2  file3  file4  file5  file6  file7  file8  file9  [0m[01;34mvagrant[0m
+]0;root@lvm:~[root@lvm ~]# exit
+logout
+]0;vagrant@lvm:~[vagrant@lvm ~]$ exit
+logout
+Connection to 127.0.0.1 closed.
+]0;mp@almavm:~/otus/otus-lvm[mp@almavm otus-lvm]$ exit
+
+Script done on 2022-05-23 14:13:57+03:00
